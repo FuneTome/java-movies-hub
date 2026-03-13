@@ -3,8 +3,8 @@ package ru.practicum.moviehub.model;
 import java.util.Objects;
 
 public class Movie {
-    final private String title;
-    final private int releaseYear;
+    final String title;
+    final int releaseYear;
 
     public Movie(String title, int releaseYear) {
         this.title = title;
