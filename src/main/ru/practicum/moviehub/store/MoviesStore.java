@@ -14,7 +14,8 @@ public class MoviesStore {
     private Gson gson = new GsonBuilder()
             .create();
 
-    public MoviesStore() {}
+    public MoviesStore() {
+    }
 
     public MoviesStore(Map<Integer, Movie> movies) {
         this.movies = movies;
