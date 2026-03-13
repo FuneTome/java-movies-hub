@@ -51,9 +51,9 @@ public class MoviesStore {
         return gson.toJson(movies);
     }
 
-    public String getMovies(String _id) {
-        try{
-            int id = Integer.parseInt(_id);
+    public String getMovies(String i) {
+        try {
+            int id = Integer.parseInt(i);
             Movie movie = movies.get(id);
             if (movie == null) {
                 return "404";
@@ -65,7 +65,7 @@ public class MoviesStore {
     }
 
     public String getMovieForYear(String y) {
-        try{
+        try {
             int year = Integer.parseInt(y);
             if (year < 1888 || year > LocalDate.now().getYear() + 1) {
                 return "400";
@@ -82,9 +82,9 @@ public class MoviesStore {
         }
     }
 
-    public String deleteMovie(String _id) {
-        try{
-            int id = Integer.parseInt(_id);
+    public String deleteMovie(String i) {
+        try {
+            int id = Integer.parseInt(i);
             if (movies.containsKey(id)) {
                 movies.remove(id);
                 return "204";
