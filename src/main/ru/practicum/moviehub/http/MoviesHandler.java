@@ -74,7 +74,7 @@ public class MoviesHandler extends BaseHttpHandler {
         } else if (!ct.getFirst().equals("application/json")) {
             sendError(ex, 415, "Unsupported Media Type", "Неправильное значение Content-Type");
         }
-        if (spl.length == 2 && spl[1].equals("movies")){
+        if (spl.length == 2 && spl[1].equals("movies")) {
             String json = moviesStore.addMovie(new String(ex.getRequestBody().readAllBytes()));
             if (json.equals("400")) {
                 sendError(ex, 400, "Bad Request", "Некорректный json");
