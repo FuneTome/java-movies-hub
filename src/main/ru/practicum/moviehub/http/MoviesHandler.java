@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
-import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 
 import java.io.IOException;
@@ -127,7 +126,7 @@ public class MoviesHandler extends BaseHttpHandler {
 
     public String isValidTitleAndYear(String body) {
         JsonObject jsonObject = gson.fromJson(body, JsonObject.class);
-        if (jsonObject.has("title") && jsonObject.has("releaseYear")){
+        if (jsonObject.has("title") && jsonObject.has("releaseYear")) {
             String title = jsonObject.get("title").getAsString();
             int year = jsonObject.get("releaseYear").getAsInt();
             if (title.isBlank()) {
