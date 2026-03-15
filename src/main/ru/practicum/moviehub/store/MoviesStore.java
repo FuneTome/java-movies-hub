@@ -3,6 +3,7 @@ package ru.practicum.moviehub.store;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import ru.practicum.moviehub.http.MoviesHandler;
 import ru.practicum.moviehub.model.Movie;
 
 import java.time.LocalDate;
@@ -21,31 +22,15 @@ public class MoviesStore {
         this.movies = movies;
     }
 
-    public String addMovie(String body) {
-        JsonObject jsonObject = gson.fromJson(body, JsonObject.class);
-        Movie movie;
-        if (jsonObject.has("title") && jsonObject.has("releaseYear")) {
-            String title = jsonObject.get("title").getAsString();
-            int year = jsonObject.get("releaseYear").getAsInt();
+    public String addMovie(JsonObject jsonObject, String body) {
+        String title = jsonObject.get("title").getAsString();
+        int year = jsonObject.get("releaseYear").getAsInt();
+        Movie movie = gson.fromJson(body, Movie.class);
+        movies.put(movie.hashCode(), movie);
 
-            if (title.isBlank()) {
-                return "blank title";
-            } else if (title.length() > 100) {
-                return "long title";
-            } else if (year < 1888 || year > LocalDate.now().getYear() + 1) {
-                return "invalid year";
-            } else {
-                movie = gson.fromJson(body, Movie.class);
-                movies.put(movie.hashCode(), movie);
-
-                JsonObject result = new JsonObject();
-                result.add(String.valueOf(movie.hashCode()), gson.toJsonTree(movie));
-
-                return gson.toJson(result);
-            }
-        } else {
-            return "400";
-        }
+        JsonObject result = new JsonObject();
+        result.add(String.valueOf(movie.hashCode()), gson.toJsonTree(movie));
+        return gson.toJson(result);
     }
 
     public String getMovies() {

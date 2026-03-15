@@ -488,4 +488,24 @@ public class MoviesApiTest {
         String body = resp.body();
         assertEquals("Код ошибки: 400\nСообщение: Bad Request\nОписание: Некорректный json", body);
     }
+
+    @Test
+    void testWhenMethodNotAllowed() throws Exception {
+
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("titl", "1");
+        jsonObject.addProperty("releaseYear", 2000);
+
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .PUT(HttpRequest.BodyPublishers.ofString(gson.toJson(jsonObject)))
+                .headers("Content-Type", "application/json")
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(405, resp.statusCode(), "POST /movies должен вернуть 405");
+    }
 }
