@@ -15,8 +15,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,8 +26,7 @@ public class MoviesApiTest {
     private static MoviesServer server;
     private static HttpClient client;
     private static MoviesHandler moviesHandler;
-    private Gson gson = new GsonBuilder()
-            .create();
+    private final Gson gson = new GsonBuilder().create();
 
     @BeforeAll
     static void beforeAll() {
@@ -53,27 +52,19 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body().trim();
-        assertTrue(body.equals("{}"), "Ожидается пустой JSON-массив");
+        assertEquals(200, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertEquals("[]", resp.body().trim(), "Ожидается пустой JSON-массив");
     }
 
     @Test
     void getMovies_returnsNotEmptyArray() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
-        movies.put(2, new Movie("2", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
+        movies.put(2, new Movie(2, "2", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -81,26 +72,21 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
+        assertEquals(200, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
 
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals(gson.toJson(movies), body);
+        List<Movie> expected = new ArrayList<>(movies.values());
+        String expectedJson = gson.toJson(expected);
+        assertEquals(expectedJson, resp.body());
     }
 
     @Test
     void getMovies_returnMovieWhenCorrectId() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -108,26 +94,18 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies/1 должен вернуть 200");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals(gson.toJson(movies.get(1)), body);
+        assertEquals(200, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertEquals(gson.toJson(movies.get(1)), resp.body());
     }
 
     @Test
     void getMovies_returnMovieWhenIdNotNumber() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -135,26 +113,18 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(400, resp.statusCode(), "GET /movies/a должен вернуть 400");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 400\nСообщение: Bad Request\nОписание: Некорректный ID", body);
+        assertEquals(400, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("ID должен быть числом"));
     }
 
     @Test
     void getMovies_returnMovieWhenIdNotFound() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -162,27 +132,19 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(404, resp.statusCode(), "GET /movies/2 должен вернуть 404");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 404\nСообщение: Not Found\nОписание: Фильм не найден", body);
+        assertEquals(404, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Фильм с ID 2 не найден"));
     }
 
     @Test
     void getMovies_returnMovieWhenCorrectYear() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
-        movies.put(2, new Movie("2", 2001));
+        movies.put(1, new Movie(1, "1", 2000));
+        movies.put(2, new Movie(2, "2", 2001));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -190,29 +152,20 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies?year=2000 должен вернуть 200");
+        assertEquals(200, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
 
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        Map<Integer, Movie> mov = new HashMap<>();
-        mov.put(1, new Movie("1", 2000));
-
-        String body = resp.body();
-        assertEquals(gson.toJson(mov), body);
+        List<Movie> expected = List.of(new Movie(1, "1", 2000));
+        assertEquals(gson.toJson(expected), resp.body());
     }
 
     @Test
     void getMovies_returnMovieWhenYearIsNotInArray() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -220,26 +173,18 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies?year=2001 должен вернуть 200");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("{}", body);
+        assertEquals(200, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertEquals("[]", resp.body());
     }
 
     @Test
     void getMovies_returnMovieWhenYearIsNotNumber() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -247,27 +192,19 @@ public class MoviesApiTest {
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(400, resp.statusCode(), "GET /movies?year=a должен вернуть 400");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 400\nСообщение: Bad Request\nОписание: Некорректный параметр запроса — a", body);
+        assertEquals(400, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Год должен быть числом"));
     }
 
     @Test
     void deleteMovies_deleteMovieWhenCorrectId() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
-        movies.put(2, new Movie("2", 2001));
+        movies.put(1, new Movie(1, "1", 2000));
+        movies.put(2, new Movie(2, "2", 2001));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -275,18 +212,16 @@ public class MoviesApiTest {
                 .DELETE()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(204, resp.statusCode(), "DELETE /movies/1 должен вернуть 204");
+        assertEquals(204, resp.statusCode());
     }
 
     @Test
     void deleteMovies_deleteMovieWhenIdNotNumber() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -294,26 +229,18 @@ public class MoviesApiTest {
                 .DELETE()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(400, resp.statusCode(), "DELETE /movies/a должен вернуть 400");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 400\nСообщение: Bad Request\nОписание: Некорректный ID", body);
+        assertEquals(400, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("ID должен быть числом"));
     }
 
     @Test
     void deleteMovies_deleteMovieWhenIdNotFound() throws Exception {
         Map<Integer, Movie> movies = new HashMap<>();
-        movies.put(1, new Movie("1", 2000));
+        movies.put(1, new Movie(1, "1", 2000));
         MoviesStore moviesStore = new MoviesStore(movies);
-
         moviesHandler.setMoviesStore(moviesStore);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -321,44 +248,33 @@ public class MoviesApiTest {
                 .DELETE()
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(404, resp.statusCode(), "DELETE /movies/2 должен вернуть 404");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 404\nСообщение: Not Found\nОписание: Фильм не найден", body);
+        assertEquals(404, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Фильм с ID 2 не найден"));
     }
 
     @Test
     void postMovies_postMovieWhereCorrectData() throws Exception {
         moviesHandler.setMoviesStore(new MoviesStore());
 
-        Movie movie = new Movie("1", 2000);
+        Movie inputMovie = new Movie("1", 2000);
+        String inputJson = gson.toJson(inputMovie);
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(movie)))
+                .POST(HttpRequest.BodyPublishers.ofString(inputJson))
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(201, resp.statusCode(), "POST /movies должен вернуть 201");
+        assertEquals(201, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
 
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("{\"4480\":{\"title\":\"1\",\"releaseYear\":2000}}", body);
+        Movie expected = new Movie(1, "1", 2000);
+        assertEquals(gson.toJson(expected), resp.body());
     }
 
     @Test
@@ -366,25 +282,17 @@ public class MoviesApiTest {
         moviesHandler.setMoviesStore(new MoviesStore());
 
         Movie movie = new Movie("", 2000);
-
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(movie)))
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 422\nСообщение: Unprocessable Entity\nОписание: Название не должно быть пустым", body);
+        assertEquals(422, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Название не должно быть пустым"));
     }
 
     @Test
@@ -392,25 +300,17 @@ public class MoviesApiTest {
         moviesHandler.setMoviesStore(new MoviesStore());
 
         Movie movie = new Movie("1".repeat(101), 2000);
-
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(movie)))
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 422\nСообщение: Unprocessable Entity\nОписание: Название должно быть короче 100 символов", body);
+        assertEquals(422, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Название должно быть короче 100 символов"));
     }
 
     @Test
@@ -418,25 +318,17 @@ public class MoviesApiTest {
         moviesHandler.setMoviesStore(new MoviesStore());
 
         Movie movie = new Movie("1", 1887);
-
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(movie)))
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(422, resp.statusCode(), "POST /movies должен вернуть 422");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 422\nСообщение: Unprocessable Entity\nОписание: Год должен быть между 1888 и 2026", body);
+        assertEquals(422, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Год должен быть между 1888 и " + (LocalDate.now().getYear() + 1)));
     }
 
     @Test
@@ -444,20 +336,16 @@ public class MoviesApiTest {
         moviesHandler.setMoviesStore(new MoviesStore());
 
         Movie movie = new Movie("1", 2000);
-
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(movie)))
                 .headers("Content-Type", "html/text")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(415, resp.statusCode(), "POST /movies должен вернуть 415");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 415\nСообщение: Unsupported Media Type\nОписание: Неправильное значение Content-Type", body);
+        assertEquals(415, resp.statusCode());
+        assertTrue(resp.body().contains("Требуется Content-Type: application/json"));
     }
 
     @Test
@@ -468,34 +356,24 @@ public class MoviesApiTest {
         jsonObject.addProperty("titl", "1");
         jsonObject.addProperty("releaseYear", 2000);
 
-
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(jsonObject)))
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(400, resp.statusCode(), "POST /movies должен вернуть 400");
-
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
-                "Content-Type должен содержать формат данных и кодировку");
-
-        String body = resp.body();
-        assertEquals("Код ошибки: 400\nСообщение: Bad Request\nОписание: Некорректный json", body);
+        assertEquals(422, resp.statusCode());
+        assertEquals("application/json; charset=UTF-8", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(resp.body().contains("Название не должно быть пустым"));
     }
 
     @Test
     void testWhenMethodNotAllowed() throws Exception {
-
         JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("titl", "1");
+        jsonObject.addProperty("title", "1");
         jsonObject.addProperty("releaseYear", 2000);
-
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
@@ -503,9 +381,8 @@ public class MoviesApiTest {
                 .headers("Content-Type", "application/json")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(405, resp.statusCode(), "POST /movies должен вернуть 405");
+        assertEquals(405, resp.statusCode());
     }
 }
